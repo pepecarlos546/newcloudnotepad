@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Notepad - Gemini</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #333; margin-top: 0; }
+        textarea { width: 100%; height: 300px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical; font-size: 16px; box-sizing: border-box; }
+        .status { margin-top: 10px; font-size: 0.9em; color: #666; font-style: italic; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; float: right; margin-top: 10px; }
+        button:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Mi Nota en la Nube</h2>
+    <textarea id="noteText" placeholder="Empieza a escribir..."></textarea>
+    <div id="status" class="status">Cargando...</div>
+    <button id="saveBtn">Guardar Ahora</button>
+</div>
+
+<script type="module">
+    // Importamos Firebase App y Firestore
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    // Tu configuración
+    const firebaseConfig = {
+        apiKey: "AIzaSyAA52M3j2sTvSwJ54U6ZvAKJHsYh-QtPGo",
+        authDomain: "note-a4c48.firebaseapp.com",
+        projectId: "note-a4c48",
+        storageBucket: "note-a4c48.firebasestorage.app",
+        messagingSenderId: "399019623588",
+        appId: "1:399019623588:web:b16689c17b92f005c59231"
+    };
+
+    // Inicializar Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Referencia al documento de la nota (usaremos un ID fijo "unica-nota")
+    const noteRef = doc(db, "notas", "mi-nota-personal");
+
+    const textarea = document.getElementById('noteText');
+    const status = document.getElementById('status');
+    const saveBtn = document.getElementById('saveBtn');
+
+    // 1. Cargar la nota y escuchar cambios en tiempo real
+    onSnapshot(noteRef, (doc) => {
+        if (doc.exists()) {
+            // Solo actualizamos si el usuario no está escribiendo para evitar saltos del cursor
+            if (document.activeElement !== textarea) {
+                textarea.value = doc.data().content;
+            }
+            status.innerText = "Sincronizado con la nube.";
+        } else {
+            status.innerText = "Nota vacía. ¡Crea tu primera nota!";
+        }
+    });
+
+    // 2. Función para guardar
+    async function saveNote() {
+        status.innerText = "Guardando...";
+        try {
+            await setDoc(noteRef, {
+                content: textarea.value,
+                timestamp: new Date()
+            }, { merge: true });
+            status.innerText = "Guardado con éxito.";
+        } catch (e) {
+            console.error("Error al guardar: ", e);
+            status.innerText = "Error al guardar. Revisa las reglas de seguridad.";
+        }
+    }
+
+    // Guardar al hacer clic
+    saveBtn.addEventListener('click', saveNote);
+
+    // Guardado automático simple (opcional: cada vez que dejas de escribir)
+    let typingTimer;
+    textarea.addEventListener('input', () => {
+        status.innerText = "Escribiendo...";
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(saveNote, 2000); // Guarda tras 2 segundos de inactividad
+    });
+
+</script>
+
+</body>
+</html>
